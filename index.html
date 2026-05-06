@@ -1047,6 +1047,32 @@
       .contact-form { padding: 20px 16px; }
       .section { padding: 40px 0; }
     }
+  /* Toast notifications */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  #toast.success { background: #2e7d4f; }
+  #toast.error   { background: #a83232; }
   </style>
 </head>
 <body>
@@ -1484,7 +1510,7 @@
         </div>
       </div>
 
-      <form class="contact-form" name="contact" method="POST" netlify action="/#contact">
+      <form class="contact-form" name="contact" method="POST" netlify>
         <input type="hidden" name="form-name" value="contact">
         <h3>Send a Message</h3>
         <div class="form-row">
@@ -1531,6 +1557,8 @@
     </div>
   </div>
 </section>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- ── FOOTER ──────────────────────────────────────── -->
 <footer class="site-footer">
@@ -1679,6 +1707,46 @@
   window.addEventListener('resize', () => { setWidths(); buildDots(); goTo(Math.min(current, maxIndex())); });
 
   init();
+
+  /* ── Contact form toast ── */
+  (function () {
+    const form = document.querySelector('form[name="contact"]');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(msg, type) {
+      clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.className = 'show ' + type;
+      toastTimer = setTimeout(() => { toast.className = ''; }, 5000);
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> &nbsp;Sending…';
+
+      try {
+        const res = await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(new FormData(form)).toString()
+        });
+        if (res.ok) {
+          showToast('✓ Message sent! We\'ll be in touch soon.', 'success');
+          form.reset();
+        } else {
+          throw new Error('Server error');
+        }
+      } catch {
+        showToast('Something went wrong. Please try again or call us directly.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> &nbsp;Send Message';
+      }
+    });
+  })();
 </script>
 
 </body>
